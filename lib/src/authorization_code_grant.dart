@@ -174,7 +174,7 @@ class AuthorizationCodeGrant {
   ///
   /// It is a [StateError] to call this more than once.
   Uri getAuthorizationUrl(Uri redirect,
-      {Iterable<String> scopes, String state}) {
+      {Iterable<String> scopes, String state, bool useCodeChallenge = true}) {
     if (_state != _State.initial) {
       throw StateError('The authorization URL has already been generated.');
     }
@@ -187,9 +187,6 @@ class AuthorizationCodeGrant {
     }
 
     _codeVerifier = _createCodeVerifier();
-    var codeChallenge = base64Url
-        .encode(sha256.convert(ascii.encode(_codeVerifier)).bytes)
-        .replaceAll('=', '');
 
     _redirectEndpoint = redirect;
     _scopes = scopes;
@@ -198,9 +195,15 @@ class AuthorizationCodeGrant {
       'response_type': 'code',
       'client_id': identifier,
       'redirect_uri': redirect.toString(),
-      'code_challenge': codeChallenge,
-      'code_challenge_method': 'S256'
     };
+
+    if (useCodeChallenge) {
+      var codeChallenge = base64Url
+          .encode(sha256.convert(ascii.encode(_codeVerifier)).bytes)
+          .replaceAll('=', '');
+      parameters['code_challenge'] = codeChallenge;
+      parameters['code_challenge_method'] = 'S256';
+    }
 
     if (state != null) parameters['state'] = state;
     if (scopes.isNotEmpty) parameters['scope'] = scopes.join(_delimiter);
